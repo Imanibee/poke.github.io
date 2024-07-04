@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokedex App</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #6b4710;
+        }
+        .card {
+            transition: transform 0.3s;
+            background: rgba(255, 255, 255, 0.2); /* Semi-transparent background */
+            backdrop-filter: blur(10px); /* Blur effect */
+            border: none; /* Optional: remove border for a cleaner look */
+        }
+        header {
+            background-color: #ff9e1e8f;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .card-img-top {
+            height: 200px;
+            object-fit: cover;
+        }
+        .modal-content {
+            background-color: #ffcb05;
+        }
+        .modal-header, .modal-footer {
+            background-color: #b36627;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-primary text-white p-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="text-center mb-0">Pokedex</h1>
+                </div>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+            <nav class="navbar navbar-expand-lg navbar-light bg-light collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">About</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" placeholder="Search Pokemon" id="searchInput">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="button" onclick="searchPokemon()">Search</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="pokemon-list">
+            <!-- Pokemon cards will be added here dynamically -->
+        </div>
+
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                <li class="page-item"><a class="page-link" href="#" onclick="previousPage()">Previous</a></li>
+                <li class="page-item"><a class="page-link" href="#" onclick="nextPage()">Next</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="pokemonModal" tabindex="-1" aria-labelledby="pokemonModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pokemonModalLabel">Pokemon Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <img src="" alt="Pokemon Image" id="modalImage" class="img-fluid mb-3">
+                    <h5 id="modalName"></h5>
+                    <p id="modalType"></p>
+                    <p id="modalAbilities"></p>
+                    <p id="modalStats"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        const baseUrl = 'https://pokeapi.co/api/v2/pokemon';
+        let currentPage = 1;
+        const limit = 12;
+        let allPokemonData = []; // To store all fetched Pokemon data
+
+        async function fetchPokemon(offset) {
+            const response = await fetch(`${baseUrl}?offset=${offset}&limit=${limit}`);
+            const data = await response.json();
+            return data.results;
+        }
+
+        async function getPokemonDetails(url) {
+            const response = await fetch(url);
+            const data = await response.json();
+            return {
+                name: data.name,
+                image: data.sprites.front_default,
+                type: data.types.map(typeInfo => typeInfo.type.name).join('/'),
+                abilities: data.abilities.map(abilityInfo => abilityInfo.ability.name).join(', '),
+                stats: data.stats.map(statInfo => `${statInfo.stat.name}: ${statInfo.base_stat}`).join(', ')
+            };
+        }
+
+        async function displayPokemon() {
+            const offset = (currentPage - 1) * limit;
+            const pokemonList = document.getElementById('pokemon-list');
+            pokemonList.innerHTML = '';
+            const pokemons = await fetchPokemon(offset);
+            for (const pokemon of pokemons) {
+                const details = await getPokemonDetails(pokemon.url);
+                allPokemonData.push({ name: details.name.toLowerCase(), details }); // Store all data for search functionality
+                const card = document.createElement('div');
+                card.className = 'col-md-4';
+                card.innerHTML = `
+                    <div class="card mb-4" onclick="showDetails('${details.name}', '${details.image}', '${details.type}', '${details.abilities}', '${details.stats}')">
+                        <img src="${details.image}" class="card-img-top" alt="${details.name}">
+                        <div class="card-body">
+                            <h5 class="card-title">${details.name}</h5>
+                            <p class="card-text">Type: ${details.type}</p>
+                        </div>
+                    </div>
+                `;
+                pokemonList.appendChild(card);
+            }
+        }
+
+        function showDetails(name, image, type, abilities, stats) {
+            document.getElementById('modalImage').src = image;
+            document.getElementById('modalName').innerText = name;
+            document.getElementById('modalType').innerText = `Type: ${type}`;
+            document.getElementById('modalAbilities').innerText = `Abilities: ${abilities}`;
+            document.getElementById('modalStats').innerText = `Stats: ${stats}`;
+            $('#pokemonModal').modal('show');
+        }
+
+        function searchPokemon() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const filteredPokemon = allPokemonData.filter(pokemon => pokemon.name.includes(searchInput));
+            displayFilteredPokemon(filteredPokemon);
+        }
+
+        function displayFilteredPokemon(filteredPokemon) {
+            const pokemonList = document.getElementById('pokemon-list');
+            pokemonList.innerHTML = '';
+            filteredPokemon.forEach(({ details }) => {
+                const card = document.createElement('div');
+                card.className = 'col-md-4';
+                card.innerHTML = `
+                    <div class="card mb-4" onclick="showDetails('${details.name}', '${details.image}', '${details.type}', '${details.abilities}', '${details.stats}')">
+                        <img src="${details.image}" class="card-img-top" alt="${details.name}">
+                        <div class="card-body">
+                            <h5 class="card-title">${details.name}</h5>
+                            <p class="card-text">Type: ${details.type}</p>
+                        </div>
+                    </div>
+                `;
+                pokemonList.appendChild(card);
+            });
+        }
+
+        function nextPage() {
+            currentPage++;
+            displayPokemon();
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayPokemon();
+            }
+        }
+
+        displayPokemon();
+    </script>
+</body>
+</html>
